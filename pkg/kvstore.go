@@ -18,8 +18,8 @@ func NewKeyValueStore() *KeyValueStore {
 	// todo: to see how best we can parameterise this
 	cacheConfig := bigcache.Config{
 		Shards:           1024,
-		LifeWindow:       2 * time.Minute,
-		CleanWindow:      1 * time.Minute,
+		LifeWindow:       45 * time.Second,
+		CleanWindow:      60 * time.Second,
 		MaxEntrySize:     800,
 		Verbose:          true,
 		HardMaxCacheSize: 8192,
