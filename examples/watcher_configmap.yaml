@@ -8,12 +8,6 @@ data:
   watched-secrets: |
     - name: my-secret-1
       namespace: default
-    - name: my-secret-2
-      namespace: kube-system
-    - name: my-secret-3
-      namespace: prod
   watched-configmaps: |
-    - name: my-cm-1
+    - name: my-cm
       namespace: default
-    - name: my-cm-2
-      namespace: kube-system
