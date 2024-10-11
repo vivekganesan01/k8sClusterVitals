@@ -2,16 +2,22 @@ package k8client
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	helpers "github.com/vivekganesan01/k8sClusterVitals/pkg"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/workqueue"
 )
@@ -67,7 +73,85 @@ func NewKubeClient(cache *helpers.KeyValueStore) (*Watcher, error) {
 	return watcher, nil
 }
 
+// WatchConfigMap watches the config map for changes and updates the secret watcher
+func (wc *Watcher) WatchScrapeConfig() {
+	log.Info().Str("caller", "watch_scrape_config").Msg("mointoring scrape config yaml file")
+	informerFactory := informers.NewSharedInformerFactoryWithOptions(wc.Clientset, 30*time.Second,
+		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
+			options.LabelSelector = "k8sclustervitals.io/config=exists"
+		}),
+	)
+	configMapInformer := informerFactory.Core().V1().ConfigMaps().Informer()
+	// Add an event handler to the informer to react to changes
+	configMapInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			configMap := obj.(*corev1.ConfigMap)
+			log.Info().Str("caller", "watch_scraper_config_add_event").Msg(helpers.LogMsg("identified scraper config ", configMap.Namespace, " ", configMap.Name))
+			wc.checkScrapeConfig(configMap, "added")
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			newConfigMap := newObj.(*corev1.ConfigMap)
+			log.Info().Str("caller", "watch_scraper_config_update_event").Msg(helpers.LogMsg("identified update scraper config ", newConfigMap.Namespace, " ", newConfigMap.Name))
+			wc.checkScrapeConfig(newConfigMap, "update")
+		},
+		DeleteFunc: func(obj interface{}) {
+			configMap := obj.(*corev1.ConfigMap)
+			log.Info().Str("caller", "watch_scraper_config_delete_event").Msg(helpers.LogMsg("identified delete scraper config ", configMap.Namespace, " ", configMap.Name))
+			wc.checkScrapeConfig(configMap, "delete")
+		},
+	})
+	// Inform the waitgroup that we're starting a new goroutine
+	go func() {
+		defer wc.Wg.Done() // Ensure that the waitgroup is decremented when the informer stops
+		stopCh := make(chan struct{})
+		defer close(stopCh)
+		informerFactory.Start(stopCh)
+		informerFactory.WaitForCacheSync(stopCh)
+	}()
+	// todo: check for kill signals
+	wc.Wg.Wait()
+}
+
+func (wc *Watcher) checkScrapeConfig(configMap *corev1.ConfigMap, reason string) {
+
+	if reason == "delete" {
+		wc.CacheStore.GoCacheDelete("watch.secrets.config")
+		wc.CacheStore.GoCacheDelete("watch.configmap.config")
+	}
+
+	var err error
+	log.Info().Str("caller", "watch_scrape_config_informer").Msg(helpers.LogMsg("added configmap", configMap.Namespace, configMap.Name))
+	var scrapeConfig helpers.ScrapeConfiguration
+	// for secret
+	err = json.Unmarshal([]byte(configMap.Data["watched-secrets"]), &scrapeConfig.WatchedSecrets)
+	if err != nil {
+		log.Error().Str("caller", "watch_scrape_config_informer_addfunc").Msg(helpers.LogMsg("found invalid scrape configuration", configMap.Namespace, configMap.Name))
+	} else {
+		// todo: clean up this code
+		_, err := json.Marshal(scrapeConfig)
+		if err != nil {
+			log.Error().Str("caller", "watch_scrape_config_informer_addfunc").Msg(helpers.LogMsg("failed to cache the scrape configuration", configMap.Namespace, configMap.Name))
+		} else {
+			wc.CacheStore.GoCacheSet("watch.secrets.config", scrapeConfig)
+		}
+	}
+	// for cm
+	err = json.Unmarshal([]byte(configMap.Data["watched-configmaps"]), &scrapeConfig.WatchedConfigMaps)
+	if err != nil {
+		log.Error().Str("caller", "watch_scrape_config_informer_addfunc").Msg(helpers.LogMsg("found invalid scrape configuration for cm", configMap.Namespace, configMap.Name))
+	} else {
+		_, err := json.Marshal(scrapeConfig)
+		if err != nil {
+			log.Error().Str("caller", "watch_scrape_config_informer_addfunc").Msg(helpers.LogMsg("found to cache the scrape configuration", configMap.Namespace, configMap.Name))
+		} else {
+			wc.CacheStore.GoCacheSet("watch.configmap.config", scrapeConfig)
+		}
+	}
+}
+
 func (wc *Watcher) StartWatchingResources(ctx context.Context, LabelSelector string) {
+	wc.Wg.Add(1)
+	go wc.WatchScrapeConfig()
 	wc.Wg.Add(1)
 	go wc.WatchDeployment(ctx, LabelSelector)
 	wc.Wg.Add(1)

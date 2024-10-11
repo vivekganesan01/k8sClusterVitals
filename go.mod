@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/allegro/bigcache/v3 v3.1.0
 	github.com/labstack/echo/v4 v4.12.0
+	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/rs/zerolog v1.33.0
 	k8s.io/api v0.20.4
 	k8s.io/apimachinery v0.20.4
@@ -16,8 +17,10 @@ require (
 	github.com/go-logr/logr v0.2.0 // indirect
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golang/protobuf v1.4.3 // indirect
+	github.com/google/go-cmp v0.5.2 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/googleapis/gnostic v0.4.1 // indirect
+	github.com/hashicorp/golang-lru v0.5.1 // indirect
 	github.com/imdario/mergo v0.3.5 // indirect
 	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/labstack/gommon v0.4.2 // indirect

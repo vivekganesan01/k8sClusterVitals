@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"os"
 	"os/signal"
@@ -73,6 +74,15 @@ func httpServer(ctx context.Context) {
 	})
 	e.GET("/healthcheck/v1/triage", func(c echo.Context) error {
 		return c.String(http.StatusOK, "todo: triage endpoint")
+	})
+	e.GET("/healthcheck/v1/scrape_configuration", func(c echo.Context) error {
+		kv := cacheStore.GoCacheGetAll()
+		// Convert map to JSON
+		jsonData, err := json.Marshal(kv)
+		if err != nil {
+			return c.String(http.StatusInternalServerError, "failed to retrieve scrape config")
+		}
+		return c.JSON(http.StatusOK, jsonData)
 	})
 	// Start the server in a goroutine
 	go func() {

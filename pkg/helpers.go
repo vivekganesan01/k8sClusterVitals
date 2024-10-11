@@ -9,6 +9,17 @@ import (
 	"github.com/allegro/bigcache/v3"
 )
 
+type ScrapeConfiguration struct {
+	WatchedSecrets []struct {
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
+	} `json:"watched-secrets"`
+	WatchedConfigMaps []struct {
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
+	} `json:"watched-configmaps"`
+}
+
 func LogMsg(args ...string) string {
 	return strings.Join(args, "")
 }
