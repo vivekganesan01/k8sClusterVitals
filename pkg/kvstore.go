@@ -44,7 +44,7 @@ func (kvs *KeyValueStore) GoCacheGetAll() interface{} {
 	return kvs.gocache.Items()
 }
 
-func (kvs *KeyValueStore) GoCacheGet(key string, value interface{}) (interface{}, error) {
+func (kvs *KeyValueStore) GoCacheGet(key string) (interface{}, error) {
 	v, ok := kvs.gocache.Get(key)
 	if ok {
 		return v, nil

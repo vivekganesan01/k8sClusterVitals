@@ -2,7 +2,6 @@ package k8client
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"flag"
 	"os"
@@ -28,11 +27,43 @@ func homeDir() string {
 	return os.Getenv("KUBE_HOME")
 }
 
+var scrapeConfig helpers.ScrapeConfiguration
+
 type Watcher struct {
 	Clientset  *kubernetes.Clientset
 	Queue      workqueue.RateLimitingInterface
 	CacheStore *helpers.KeyValueStore
 	Wg         sync.WaitGroup
+}
+
+func (wc *Watcher) syncScrapeConfiguration(configMap *corev1.ConfigMap, reason string) {
+	if reason == "delete" {
+		wc.CacheStore.GoCacheDelete("watch.secrets.config")
+		wc.CacheStore.GoCacheDelete("watch.configmaps.config")
+		return
+	}
+	// need this to refresh cache upon scrape configuration update
+	wc.CacheStore.GoCacheDelete("watch.secrets.config")
+	wc.CacheStore.GoCacheDelete("watch.configmaps.config")
+
+	watched_secrets, ok := configMap.Data["watched-secrets"]
+	if !ok {
+		log.Info().Str("caller", "sync_scrape_configuration").Msg("watched-secrets not found in the scrape configuration")
+		wc.CacheStore.GoCacheDelete("watch.secrets.config")
+	} else {
+		yaml.Unmarshal([]byte(watched_secrets), &scrapeConfig.WatchedSecrets)
+		log.Info().Str("caller", "sync_scrape_configuration").Msg(helpers.LogMsg("watched-secrets set for event ", reason))
+		wc.CacheStore.GoCacheSet("watch.secrets.config", scrapeConfig.WatchedSecrets)
+	}
+
+	watched_configmaps, ok := configMap.Data["watched-configmaps"]
+	if !ok {
+		log.Info().Str("caller", "sync_scrape_configuration").Msg("watched-configmaps not found in the scrape configuration")
+	} else {
+		yaml.Unmarshal([]byte(watched_configmaps), &scrapeConfig.WatchedConfigMaps)
+		log.Info().Str("caller", "sync_scrape_configuration").Msg(helpers.LogMsg("watched-configmap set for event ", reason))
+		wc.CacheStore.GoCacheSet("watch.configmaps.config", scrapeConfig.WatchedConfigMaps)
+	}
 }
 
 func NewKubeClient(cache *helpers.KeyValueStore) (*Watcher, error) {
@@ -88,31 +119,17 @@ func (wc *Watcher) WatchScrapeConfig() {
 		AddFunc: func(obj interface{}) {
 			configMap := obj.(*corev1.ConfigMap)
 			log.Info().Str("caller", "watch_scraper_config_add_event").Msg(helpers.LogMsg("identified scraper config ", configMap.Namespace, " ", configMap.Name))
-			// wc.checkScrapeConfig(newConfigMap, "added")
-			var scrapeConfig helpers.ScrapeConfiguration
-			wc.CacheStore.GoCacheDelete("watch.secrets.config")
-			wc.CacheStore.GoCacheDelete("watch.configmaps.config")
-			yaml.Unmarshal([]byte(configMap.Data["watched-secrets"]), &scrapeConfig.WatchedSecrets)
-			wc.CacheStore.GoCacheSet("watch.secrets.config", scrapeConfig)
-			yaml.Unmarshal([]byte(configMap.Data["watched-configmaps"]), &scrapeConfig.WatchedConfigMaps)
-			wc.CacheStore.GoCacheSet("watch.configmaps.config", scrapeConfig)
+			wc.syncScrapeConfiguration(configMap, "added")
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			newConfigMap := newObj.(*corev1.ConfigMap)
 			log.Info().Str("caller", "watch_scraper_config_update_event").Msg(helpers.LogMsg("identified update scraper config ", newConfigMap.Namespace, " ", newConfigMap.Name))
-			// wc.checkScrapeConfig(newConfigMap, "update")
-			var scrapeConfig helpers.ScrapeConfiguration
-			wc.CacheStore.GoCacheDelete("watch.secrets.config")
-			wc.CacheStore.GoCacheDelete("watch.configmaps.config")
-			yaml.Unmarshal([]byte(newConfigMap.Data["watched-secrets"]), &scrapeConfig.WatchedSecrets)
-			wc.CacheStore.GoCacheSet("watch.secrets.config", scrapeConfig)
-			yaml.Unmarshal([]byte(newConfigMap.Data["watched-configmaps"]), &scrapeConfig.WatchedConfigMaps)
-			wc.CacheStore.GoCacheSet("watch.configmaps.config", scrapeConfig)
+			wc.syncScrapeConfiguration(newConfigMap, "updated")
 		},
 		DeleteFunc: func(obj interface{}) {
 			configMap := obj.(*corev1.ConfigMap)
 			log.Info().Str("caller", "watch_scraper_config_delete_event").Msg(helpers.LogMsg("identified delete scraper config ", configMap.Namespace, " ", configMap.Name))
-			wc.checkScrapeConfig(configMap, "delete")
+			wc.syncScrapeConfiguration(configMap, "delete")
 		},
 	})
 
@@ -139,45 +156,45 @@ func (wc *Watcher) WatchScrapeConfig() {
 	// wc.Wg.Wait()
 }
 
-func (wc *Watcher) checkScrapeConfig(configMap *corev1.ConfigMap, reason string) {
+// func (wc *Watcher) checkScrapeConfig(configMap *corev1.ConfigMap, reason string) {
 
-	if reason == "delete" {
-		wc.CacheStore.GoCacheDelete("watch.secrets.config")
-		wc.CacheStore.GoCacheDelete("watch.configmaps.config")
-		return
-	}
+// 	if reason == "delete" {
+// 		wc.CacheStore.GoCacheDelete("watch.secrets.config")
+// 		wc.CacheStore.GoCacheDelete("watch.configmaps.config")
+// 		return
+// 	}
 
-	var err error
-	log.Info().Str("caller", "checkScrapeConfig").Msg(helpers.LogMsg("identified scrape configuration ", configMap.Namespace, " ", configMap.Name))
-	var scrapeConfig helpers.ScrapeConfiguration
-	// for secret
-	err = yaml.Unmarshal([]byte(configMap.Data["watched-secrets"]), &scrapeConfig.WatchedSecrets)
-	if err != nil {
-		log.Error().Str("caller", "check_scrape_config").Msg(helpers.LogMsg("found invalid scrape configuration", configMap.Namespace, configMap.Name))
-	} else {
-		// todo: clean up this code
-		_, err := json.Marshal(scrapeConfig)
-		if err != nil {
-			log.Error().Str("caller", "check_scrape_config").Msg(helpers.LogMsg("failed to cache the scrape configuration", configMap.Namespace, configMap.Name))
-		} else {
-			log.Info().Str("caller", "check_scrape_config").Msg("updating scrape config to cache - secret")
-			wc.CacheStore.GoCacheSet("watch.secrets.config", scrapeConfig.WatchedSecrets)
-		}
-	}
-	// for cm
-	err = yaml.Unmarshal([]byte(configMap.Data["watched-configmaps"]), &scrapeConfig.WatchedConfigMaps)
-	if err != nil {
-		log.Error().Str("caller", "check_scrape_config").Msg(helpers.LogMsg("found invalid scrape configuration for cm", configMap.Namespace, configMap.Name))
-	} else {
-		_, err := json.Marshal(scrapeConfig)
-		if err != nil {
-			log.Error().Str("caller", "check_scrape_config").Msg(helpers.LogMsg("found to cache the scrape configuration", configMap.Namespace, configMap.Name))
-		} else {
-			log.Info().Str("caller", "check_scrape_config").Msg("updating scrape config to cache - cm")
-			wc.CacheStore.GoCacheSet("watch.configmaps.config", scrapeConfig.WatchedConfigMaps)
-		}
-	}
-}
+// 	var err error
+// 	log.Info().Str("caller", "checkScrapeConfig").Msg(helpers.LogMsg("identified scrape configuration ", configMap.Namespace, " ", configMap.Name))
+// 	var scrapeConfig helpers.ScrapeConfiguration
+// 	// for secret
+// 	err = yaml.Unmarshal([]byte(configMap.Data["watched-secrets"]), &scrapeConfig.WatchedSecrets)
+// 	if err != nil {
+// 		log.Error().Str("caller", "check_scrape_config").Msg(helpers.LogMsg("found invalid scrape configuration", configMap.Namespace, configMap.Name))
+// 	} else {
+// 		// todo: clean up this code
+// 		_, err := json.Marshal(scrapeConfig)
+// 		if err != nil {
+// 			log.Error().Str("caller", "check_scrape_config").Msg(helpers.LogMsg("failed to cache the scrape configuration", configMap.Namespace, configMap.Name))
+// 		} else {
+// 			log.Info().Str("caller", "check_scrape_config").Msg("updating scrape config to cache - secret")
+// 			wc.CacheStore.GoCacheSet("watch.secrets.config", scrapeConfig.WatchedSecrets)
+// 		}
+// 	}
+// 	// for cm
+// 	err = yaml.Unmarshal([]byte(configMap.Data["watched-configmaps"]), &scrapeConfig.WatchedConfigMaps)
+// 	if err != nil {
+// 		log.Error().Str("caller", "check_scrape_config").Msg(helpers.LogMsg("found invalid scrape configuration for cm", configMap.Namespace, configMap.Name))
+// 	} else {
+// 		_, err := json.Marshal(scrapeConfig)
+// 		if err != nil {
+// 			log.Error().Str("caller", "check_scrape_config").Msg(helpers.LogMsg("found to cache the scrape configuration", configMap.Namespace, configMap.Name))
+// 		} else {
+// 			log.Info().Str("caller", "check_scrape_config").Msg("updating scrape config to cache - cm")
+// 			wc.CacheStore.GoCacheSet("watch.configmaps.config", scrapeConfig.WatchedConfigMaps)
+// 		}
+// 	}
+// }
 
 func (wc *Watcher) StartWatchingResources(ctx context.Context, LabelSelector string) {
 	// wc.Wg.Add(1)
@@ -186,4 +203,8 @@ func (wc *Watcher) StartWatchingResources(ctx context.Context, LabelSelector str
 	go wc.WatchDeployment(ctx, LabelSelector)
 	wc.Wg.Add(1)
 	go wc.WatchStatefulSet(ctx, LabelSelector)
+	wc.Wg.Add(1)
+	go wc.WatchSecrets(ctx)
+	wc.Wg.Add(1)
+	go wc.WatchConfigMaps(ctx)
 }

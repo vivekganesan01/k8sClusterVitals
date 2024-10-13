@@ -13,6 +13,7 @@ type ScrapeConfiguration struct {
 	WatchedSecrets    []WatchedResource `yaml:"watched-secrets"`
 	WatchedConfigMaps []WatchedResource `yaml:"watched-configmaps"`
 }
+
 type WatchedResource struct {
 	Name      string `yaml:"name"`
 	Namespace string `yaml:"namespace"`

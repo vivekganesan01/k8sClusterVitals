@@ -5,9 +5,6 @@ metadata:
   labels:
     k8sclustervitals.io/config: "exists"
 data:
-  watched-secrets: |
-    - name: my-secret-1
-      namespace: default
   watched-configmaps: |
-    - name: my-cm
+    - name: my-cm-latest
       namespace: default

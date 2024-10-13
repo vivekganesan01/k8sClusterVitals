@@ -72,7 +72,7 @@ func httpServer(ctx context.Context) {
 		return c.JSON(http.StatusOK, status)
 	})
 	e.GET("/healthcheck/v1/triage", func(c echo.Context) error {
-		return c.String(http.StatusOK, "todo: triage endpoint")
+		return c.String(http.StatusOK, "todo: triage endpoint under development")
 	})
 	e.GET("/healthcheck/v1/scrape_configuration", func(c echo.Context) error {
 		kv := cacheStore.GoCacheGetAll()
