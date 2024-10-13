@@ -11,9 +11,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// watch for resource under my configmap map cache
-// alert the cache
-
 func (wc *Watcher) WatchSecrets(ctx context.Context) {
 	defer wc.Wg.Done()
 	for {

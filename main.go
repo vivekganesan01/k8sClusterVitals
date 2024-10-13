@@ -21,7 +21,7 @@ const LabelSelector = "k8sclustervitals.io/scrape=true"
 func init() {
 	log.Info().Str("caller", "main.go").Msg("Welcome to k8sClusterVitals ... starting....")
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	log.Info().Str("caller", "main.go").Msg("Initialising cache server....")
+	log.Info().Str("caller", "main.go").Msg("initialising cache server....")
 	cacheStore = helpers.NewKeyValueStore()
 }
 
@@ -32,7 +32,7 @@ func main() {
 
 	watcher, err := k8client.NewKubeClient(cacheStore)
 	if err != nil {
-		log.Error().Str("caller", "main.go").Msg(helpers.LogMsg("Failed to create kubeclient", err.Error()))
+		log.Error().Str("caller", "main.go").Msg(helpers.LogMsg("failed to create kubeclient", err.Error()))
 	}
 	log.Info().Str("caller", "main.go").Msg("starting to watch resources .... starting ....")
 	// Start watching resources
@@ -42,7 +42,7 @@ func main() {
 		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 		go func() {
 			sig := <-sigs // Wait for a termination signal
-			log.Info().Str("signal", sig.String()).Msg("Termination signal received. Initiating shutdown...")
+			log.Info().Str("signal", sig.String()).Msg("termination signal received. Initiating shutdown...")
 			cancel() // Cancel the context to stop goroutines
 		}()
 
@@ -53,7 +53,7 @@ func main() {
 		return
 	}
 
-	// select{} // here this is not need as we use waitgroup and graceful shutdown
+	// select{} // Ignore notes: here this is not need as we use waitgroup and graceful shutdown
 }
 
 func httpServer(ctx context.Context) {
@@ -76,11 +76,6 @@ func httpServer(ctx context.Context) {
 	})
 	e.GET("/healthcheck/v1/scrape_configuration", func(c echo.Context) error {
 		kv := cacheStore.GoCacheGetAll()
-		// Convert map to JSON
-		// jsonData, err := json.Marshal(kv)
-		// if err != nil {
-		// 	return c.String(http.StatusInternalServerError, "failed to retrieve scrape config")
-		// }
 		return c.JSON(http.StatusOK, kv)
 	})
 	// Start the server in a goroutine

@@ -16,8 +16,7 @@ import (
 const deployments = "deployment"
 
 func (wc *Watcher) checkDeploymentHealth(deploy *v1.Deployment, initialDelaySeconds int16) {
-	// log.Info().Str("caller", "check_deployment_health").Str("tag", deployments).Str("namespace", deploy.Namespace).Msg(helpers.LogMsg("checking deployment status for ", deploy.Name, " under ", deploy.Namespace))
-	time.Sleep(time.Duration(initialDelaySeconds) * time.Second)
+	time.Sleep(time.Duration(initialDelaySeconds) * time.Second) //todo: customised param for all the timers
 	if deploy.Status.AvailableReplicas == *deploy.Spec.Replicas && deploy.Status.UnavailableReplicas == 0 {
 		log.Info().Str("caller", "check_deployment_health").Str("tag", deployments).Str("namespace", deploy.Namespace).Msg(helpers.LogMsg("deployment is healthy: ", deploy.Name))
 		wc.CacheStore.Delete(fmt.Sprintf("deployment.apps/%s", deploy.Name))
@@ -36,12 +35,12 @@ func (wc *Watcher) WatchDeployment(ctx context.Context, LabelSelector string) {
 			log.Info().Str("caller", "watch_deployment").Msg("gracefully shutting down deployment watch")
 			return
 		default:
-			time.Sleep(15 * time.Second) // todo param this timer
+			time.Sleep(15 * time.Second) // todo: param this timer
 			deployments, err := wc.Clientset.AppsV1().Deployments("").List(context.TODO(), metav1.ListOptions{
-				LabelSelector: LabelSelector, // Use LabelSelector to filter deployments by annotations
+				LabelSelector: LabelSelector,
 			})
 			if err != nil {
-				log.Info().Str("caller", "watch_deployment").Msg("no deployment has been found...")
+				log.Info().Str("caller", "watch_deployment").Msg("no deployment has been found")
 				continue
 			}
 			for _, deployment := range deployments.Items {
