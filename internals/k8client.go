@@ -59,6 +59,7 @@ func (wc *Watcher) syncScrapeConfiguration(configMap *corev1.ConfigMap, reason s
 	watched_configmaps, ok := configMap.Data["watched-configmaps"]
 	if !ok {
 		log.Info().Str("caller", "sync_scrape_configuration").Msg("watched-configmaps not found in the scrape configuration")
+		wc.CacheStore.GoCacheDelete("watch.secrets.config")
 	} else {
 		yaml.Unmarshal([]byte(watched_configmaps), &scrapeConfig.WatchedConfigMaps)
 		log.Info().Str("caller", "sync_scrape_configuration").Msg(helpers.LogMsg("watched-configmap set for event ", reason))
