@@ -22,9 +22,15 @@ k8sClusterVitals can monitor the following Kubernetes resources:
 - Secrets
 - ConfigMaps
 
-For **Deployments and StatefulSets**, to monitor the resource health, you need to add a label called **k8sclustervitals.io/scrape=true**. Once labeled, these resources will be actively monitored by k8sClusterVitals. If the health of a labeled Deployment or StatefulSet is compromised, it will be reported via the API endpoint.
+For **Deployments and StatefulSets**:
+
+To monitor the resource health, you need to add a label called **k8sclustervitals.io/scrape=true**. Once labeled, these resources will be actively monitored by k8sClusterVitals. If the health of a labeled Deployment or StatefulSet is compromised, it will be reported via the API endpoint.
 
 Here’s an example of how to label a Deployment for monitoring:
+
+eg: sample deployment [sample_deployment.yaml](./examples/sample_deployment.yaml)
+
+eg: sample statefulset [sample_statefulset.yaml](./examples/sample_statefulset.yaml)
 
 ```
 apiVersion: apps/v1
@@ -59,10 +65,11 @@ spec:
 
 ```
 ## Example Output:
-#### If a resource is unhealthy, the following command will return not_ok:
+### If a resource is unhealthy, the following command will return not_ok:
 ---
 ```
 curl -X GET http://localhost:1323/healthcheck/v1/health
+# returns not_ok
 ```
 For continuous status updates:
 ```
@@ -86,9 +93,13 @@ Output:
 {}
 ```
 
-For **Secrets and ConfigMaps**, k8sClusterVitals tracks whether a specified Secret or ConfigMap exists. Users need to provide the names of the Secrets and ConfigMaps to be watched via a ConfigMap, and those resources will be monitored accordingly.
+For **Secrets and ConfigMaps**:
+
+k8sClusterVitals tracks whether a specified Secret or ConfigMap exists. Users need to provide the names of the Secrets and ConfigMaps to be watched via a ConfigMap, and those resources will be monitored accordingly.
 
 To track a Secret or ConfigMap, you can optionally configure the following information:
+
+eg: scrape configuration [watcher_configmap.yaml](./examples/watcher_configmap.yaml)
 
 ```
 watched-secrets: |        # optional
@@ -123,10 +134,11 @@ data:
 This setup will allow k8sClusterVitals to monitor the specified Secrets and ConfigMaps based on the provided configuration.
 
 ## Example Output:
-#### If a provided secret or configmap does not exists, the following command will return not_ok:
+### If a provided secret or configmap does not exists, the following command will return not_ok:
 ---
 ```
 curl -X GET http://localhost:1323/healthcheck/v1/health
+# return not_ok
 ```
 For continuous status updates:
 ```
@@ -150,14 +162,14 @@ Output:
 {}
 ```
 
-#### **You can monitor any number of Deployments, StatefulSets, Secrets, and ConfigMaps. k8sClusterVitals will continuously track these resources and report their status via the exposed API endpoint, ensuring that you receive real-time health updates and can take necessary action. The system also supports retries for tracking in case of initial failure.**
----
-## Installation
+
+**You can monitor any number of Deployments, StatefulSets, Secrets, and ConfigMaps. k8sClusterVitals will continuously track these resources and report their status via the exposed API endpoint, ensuring that you receive real-time health updates and can take necessary action. The system also supports retries for tracking in case of initial failure.**
+
+## Installation:
 
 k8sClusterVitals supports both local and cluster deployments.
 
-Local Deployment
-For local deployment, the following two environment variables are required:
+**For local deployment, the following two environment variables are required:**
 
 ```
 export KUBE_HOME=${HOME}
@@ -177,12 +189,12 @@ To run the code:
 ./bin/k8sclustervitals-v0.0.1-darwin-amd64
 ```
 
-### Cluster Deployment
+**For Cluster Deployment:**
 For cluster deployments, pass the required environment variable to the pod via the Deployment YAML:
 
 ```
 # Set this environment variable in the pod's container spec
 ENV="inclusterconfig"
 ```
-Note: Docker image and Helm charts are coming soon.
 
+**Note: Docker image and Helm charts are coming soon.**
