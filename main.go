@@ -27,9 +27,8 @@ func init() {
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
-	go httpServer(ctx)
 	defer cancel() // Ensure the context is cancelled when the main function exits
-
+	go httpServer(ctx)
 	watcher, err := k8client.NewKubeClient(cacheStore)
 	if err != nil {
 		log.Error().Str("caller", "main.go").Msg(helpers.LogMsg("failed to create kubeclient", err.Error()))
@@ -58,6 +57,16 @@ func main() {
 
 func httpServer(ctx context.Context) {
 	e := echo.New()
+
+	e.GET("/readiness", func(c echo.Context) error {
+		ok := k8client.ReadinessProbe()
+		if ok {
+			return c.String(http.StatusOK, "ok")
+		} else {
+			return c.String(http.StatusServiceUnavailable, "not_ok")
+		}
+	})
+
 	e.GET("/healthcheck/v1/health", func(c echo.Context) error {
 		if cacheStore.LenAll() >= 1 {
 			return c.String(http.StatusServiceUnavailable, "not_ok")

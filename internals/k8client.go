@@ -22,12 +22,12 @@ import (
 	"k8s.io/client-go/util/workqueue"
 )
 
-// Helper function to get the home directory
-func homeDir() string {
-	return os.Getenv("KUBE_HOME")
-}
-
 var scrapeConfig helpers.ScrapeConfiguration
+
+var (
+	kubeClientReady bool
+	readyMutex      sync.RWMutex
+)
 
 type Watcher struct {
 	Clientset  *kubernetes.Clientset
@@ -106,6 +106,44 @@ func NewKubeClient(cache *helpers.KeyValueStore) (*Watcher, error) {
 	return watcher, nil
 }
 
+// Helper function to get the home directory
+func homeDir() string {
+	return os.Getenv("KUBE_HOME")
+}
+
+func setKubeClientReady(ready bool) {
+	readyMutex.Lock()
+	defer readyMutex.Unlock()
+	kubeClientReady = ready
+}
+
+// Periodically check if the Kubernetes client can list resources (e.g., pods)
+func (wc *Watcher) CheckKubeClientHealth(ctx context.Context) {
+	defer wc.Wg.Done()
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info().Str("caller", "check_kube_client_health").Msg("gracefully shutting down healthcheck watch")
+			return
+		default:
+			_, err := wc.Clientset.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{})
+			if err != nil {
+				setKubeClientReady(false)
+			} else {
+				setKubeClientReady(true)
+			}
+			time.Sleep(10 * time.Second)
+		}
+	}
+}
+
+func ReadinessProbe() bool {
+	readyMutex.RLock()
+	ready := kubeClientReady
+	readyMutex.RUnlock()
+	return ready
+}
+
 // WatchScrapeConfig watches the config map for changes and updates the secret watcher
 func (wc *Watcher) WatchScrapeConfig() {
 	log.Info().Str("caller", "watch_scrape_config").Msg("mointoring scrape config yaml file")
@@ -147,6 +185,8 @@ func (wc *Watcher) WatchScrapeConfig() {
 
 func (wc *Watcher) StartWatchingResources(ctx context.Context, LabelSelector string) {
 	go wc.WatchScrapeConfig()
+	wc.Wg.Add(1)
+	go wc.CheckKubeClientHealth(ctx)
 	wc.Wg.Add(1)
 	go wc.WatchDeployment(ctx, LabelSelector)
 	wc.Wg.Add(1)
