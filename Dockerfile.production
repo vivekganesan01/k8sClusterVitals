@@ -1,0 +1,22 @@
+# compile
+FROM golang:1.19 as builder
+
+WORKDIR /app
+
+# Download Go modules
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+# Build
+RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/k8sclustervitals .
+
+# Build
+FROM scratch
+# Label
+LABEL maintainer="vivekganesan01@gmail.com"
+# Copy our static executable.
+COPY --from=builder /bin/k8sclustervitals /bin/k8sclustervitals
+# Run the hello binary.
+ENTRYPOINT ["/bin/k8sclustervitals"]

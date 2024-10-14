@@ -2,16 +2,19 @@ package helpers
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
 	"github.com/allegro/bigcache/v3"
+	"github.com/patrickmn/go-cache"
 )
 
 type KeyValueStore struct {
-	cache *bigcache.BigCache
-	keys  map[string][]byte
-	mu    sync.Mutex // Mutex for protecting access to keys
+	cache   *bigcache.BigCache
+	gocache *cache.Cache
+	keys    map[string][]byte
+	mu      sync.Mutex // Mutex for protecting access to keys
 }
 
 func NewKeyValueStore() *KeyValueStore {
@@ -24,8 +27,29 @@ func NewKeyValueStore() *KeyValueStore {
 		Verbose:          true,
 		HardMaxCacheSize: 8192,
 	}
-	cache, _ := bigcache.New(context.Background(), cacheConfig)
-	return &KeyValueStore{cache: cache, keys: make(map[string][]byte)}
+	bigcache, _ := bigcache.New(context.Background(), cacheConfig)
+	gocache := cache.New(5*time.Minute, 10*time.Minute)
+	return &KeyValueStore{cache: bigcache, gocache: gocache, keys: make(map[string][]byte)}
+}
+
+func (kvs *KeyValueStore) GoCacheSet(key string, value interface{}) error {
+	return kvs.gocache.Add(key, value, cache.NoExpiration)
+}
+
+func (kvs *KeyValueStore) GoCacheDelete(key string) {
+	kvs.gocache.Delete(key)
+}
+
+func (kvs *KeyValueStore) GoCacheGetAll() interface{} {
+	return kvs.gocache.Items()
+}
+
+func (kvs *KeyValueStore) GoCacheGet(key string) (interface{}, error) {
+	v, ok := kvs.gocache.Get(key)
+	if ok {
+		return v, nil
+	}
+	return nil, errors.New("gocache key not found")
 }
 
 func (kvs *KeyValueStore) Set(key string, value []byte) error {

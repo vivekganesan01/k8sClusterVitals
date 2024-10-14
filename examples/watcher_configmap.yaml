@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: secret-cm-watcher-config
+  labels:
+    k8sclustervitals.io/config: "exists"
+data:
+  watched-secrets: |
+    - name: my-secret-vivek
+      namespace: default
+  watched-configmaps: |
+    - name: my-cm-latest
+      namespace: default
