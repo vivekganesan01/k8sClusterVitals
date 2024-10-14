@@ -10,7 +10,7 @@ RUN go mod download
 COPY . .
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/k8sclustervitals
+RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/k8sclustervitals .
 
 # Build
 FROM scratch
