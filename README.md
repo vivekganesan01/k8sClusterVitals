@@ -28,9 +28,9 @@ To monitor the health of the resource, you must add a label called **k8sclusterv
 
 Here’s an example of how to label a Deployment for monitoring:
 
-    eg: sample deployment [sample_deployment.yaml](./examples/sample_deployment.yaml)
+eg: refer [sample_deployment.yaml](./examples/sample_deployment.yaml)
 
-    eg: sample statefulset [sample_statefulset.yaml](./examples/sample_statefulset.yaml)
+eg: refer [sample_statefulset.yaml](./examples/sample_statefulset.yaml)
 
 ```yaml
 apiVersion: apps/v1
@@ -100,7 +100,7 @@ k8sClusterVitals tracks whether a specified Secret or ConfigMap exists. Users ne
 
 To track a Secret or ConfigMap, you can optionally configure the following information:
 
-    eg: scrape configuration [watcher_configmap.yaml](./examples/watcher_configmap.yaml)
+eg: refer sample scrape configuration file [watcher_configmap.yaml](./examples/watcher_configmap.yaml)
 
 ```yaml
 watched-secrets: |        # optional
@@ -116,7 +116,8 @@ watched-configmaps: |     # optional
 - The ConfigMap must include the label `k8sclustervitals.io/config=exists`.
 - The ConfigMap's name doesn't matter, as it uses the label to identify the configuration.
 
-Example
+Example:
+
 ```yaml
 apiVersion: v1
 kind: ConfigMap
@@ -173,34 +174,33 @@ k8sClusterVitals supports both local and cluster deployments.
 
 ***Via local deployment:***
 
-Note: the following two environment variables are required
+```bash
+# Note: the following two environment variables are required
+# Step 1: Export this variable:
 
-Step 1: Export this variable:
-
-```
 export KUBE_HOME=${HOME}
 export ENV="kubeconfig"
-```
 
-Step 2: To run the code:
-  - Navigate to the bin directory.
-  - Identify the appropriate binary for your operating system:
-      - linux64-amd
-      - linux64-arm
-      - darwin64-amd
-      - darwin64-arm
-  - Run the corresponding binary file:
+# Step 2: To run the code:
 
-```bash
-# For macOS
-./bin/k8sclustervitals-v0.0.1-darwin-amd64
+#  - Navigate to the bin directory.
+#  - Identify the appropriate binary for your operating system:
+#      - linux64-amd
+#      - linux64-arm
+#      - darwin64-amd
+#      - darwin64-arm
+#  - Run the corresponding binary file:
+
+# eg: For macOS
+
+./bin/k8sclustervitals-v0.0.1-darwin-amd6
+
 ```
 
 ***Via Docker Local:***
 
 ```bash
 docker build -t k8sclustervitals -f Dockerfile.production ${pwd}
-
 docker run -v ${HOME}/.kube:/root/.kube -e KUBE_HOME="/home" -e ENV="kubeconfig" -p 1323:1323  k8sclustervitals:latest
 ```
 
@@ -213,28 +213,24 @@ docker run -v ${HOME}/.kube:/home/.kube -e KUBE_HOME="/home" -e ENV="kubeconfig"
 
 ***Via Cluster Deployment:***
 
-For cluster deployments, pass the required environment variable to the pod via the Deployment YAML:
-
-Step 1: Navigate to the Helm chart directory
 
 ```bash
+# For cluster deployments, pass the required environment variable to the pod via the Deployment YAML:
+
+# Step 1: Navigate to the Helm chart directory
+
     cd ./charts
- ```
+ 
+# Step 2: Install the Helm chart
 
-Step 2: Install the Helm chart
+# Run the following command to install the `k8clustervitals` chart. You can customize the release name (`my-release`) as needed. Note: namespace has to be `k8cv`
 
-Run the following command to install the `k8clustervitals` chart. You can customize the release name (`my-release`) as needed. Note: namespace has to be `k8cv`
-
-```bash
    helm install my-release ./k8sclustervitals --create-namespace --namespace k8cv
-```
 
- - `my-release`: This is the release name. You can choose any name for the release.
- - `./k8clustervitals`: This is the relative path to the Helm chart.
- - `--namespace`: for now it must be "k8cv"
+ # - `my-release`: This is the release name. You can choose any name for the release.
+ # - `./k8clustervitals`: This is the relative path to the Helm chart.
+ # - `--namespace`: for now it must be "k8cv"
 
-### Example:
-
-```bash
- helm install my-release ./k8sclustervitals  --create-namespace --namespace k8cv
+ #  Example:
+helm install my-release ./k8sclustervitals  --create-namespace --namespace k8cv
 ```
