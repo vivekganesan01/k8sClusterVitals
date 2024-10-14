@@ -24,7 +24,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "k8sclustervitals.serviceAccountName" . }}
+      serviceAccountName: {{ .Values.serviceAccount.name }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
@@ -40,10 +40,10 @@ spec:
             - name: http
               containerPort: 1323
               protocol: TCP
-          readinessProbe:
-            httpGet:
-              path: /
-              port: http
+          # readinessProbe: # todo: need to fix readiness probe
+          #   httpGet:
+          #     path: /readiness
+          #     port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}

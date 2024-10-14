@@ -210,19 +210,20 @@ For cluster deployments, pass the required environment variable to the pod via t
 
 1. **Navigate to the Helm chart directory**:
 ```bash
-    cd ./charts/k8clustervitals
+    cd ./charts
  ```
 2. **Install the Helm chart**:
- Run the following command to install the `k8clustervitals` chart. You can customize the release name (`my-release`) and the namespace (`my-namespace`) as needed:
+ Run the following command to install the `k8clustervitals` chart. You can customize the release name (`my-release`) as needed:
+ Note: namespace has to be k8cv
 ```bash
-    helm install my-release ./k8clustervitals --namespace my-namespace
+   helm install my-release ./k8sclustervitals --create-namespace --namespace k8cv
 ```
 
  - `my-release`: This is the release name. You can choose any name for the release.
  - `./k8clustervitals`: This is the relative path to the Helm chart.
- - `--namespace`: Specify the namespace where you want to install the chart. If the namespace doesn't exist, you may need to create it using `kubectl create namespace my-namespace`.
+ - `--namespace`: for now it must be "k8cv"
 
 ### Example:
 ```bash
-helm install my-release ./k8clustervitals --namespace my-namespace
+ helm install my-release ./k8sclustervitals  --create-namespace --namespace k8cv
 ```

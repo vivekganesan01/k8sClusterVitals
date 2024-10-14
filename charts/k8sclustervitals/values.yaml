@@ -5,10 +5,10 @@
 replicaCount: 1
 
 image:
-  repository: docker.io/vivekganesanops/k8clustervitals
-  pullPolicy: IfNotPresent
+  repository: docker.io/vivekganesanops/k8sclustervitals
+  pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "v0.0.1"
+  tag: latest
 
 imagePullSecrets: []
 nameOverride: ""
@@ -21,7 +21,8 @@ serviceAccount:
   annotations: {}
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
-  name: ""
+  name: "k8sclustervitals-service-account"
+  namespace: "k8cv" # todo: move to release.namespace
 
 podAnnotations: {}
 
