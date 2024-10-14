@@ -22,17 +22,17 @@ k8sClusterVitals can monitor the following Kubernetes resources:
 - Secrets
 - ConfigMaps
 
-For **Deployments and StatefulSets**:
-
-To monitor the resource health, you need to add a label called **k8sclustervitals.io/scrape=true**. Once labeled, these resources will be actively monitored by k8sClusterVitals. If the health of a labeled Deployment or StatefulSet is compromised, it will be reported via the API endpoint.
+For ***Deployments and StatefulSets***:
+======================================
+To monitor the health of the resource, you must add a label called **k8sclustervitals.io/scrape=true**. Once labeled, these resources will be actively monitored by k8sClusterVitals. If the health of a labeled Deployment or StatefulSet is compromised, it will be reported via the API endpoint.
 
 Here’s an example of how to label a Deployment for monitoring:
 
-eg: sample deployment [sample_deployment.yaml](./examples/sample_deployment.yaml)
+    eg: sample deployment [sample_deployment.yaml](./examples/sample_deployment.yaml)
 
-eg: sample statefulset [sample_statefulset.yaml](./examples/sample_statefulset.yaml)
+    eg: sample statefulset [sample_statefulset.yaml](./examples/sample_statefulset.yaml)
 
-```
+```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -65,7 +65,7 @@ spec:
 
 ```
 ## Example Output:
-### If a resource is unhealthy, the following command will return not_ok:
+#### If a resource is unhealthy, the following command will return not_ok:
 ---
 ```
 curl -X GET http://localhost:1323/healthcheck/v1/health
@@ -79,7 +79,7 @@ The output will show:
 ```
 {"deployment.apps/nginx-deployment": "Unavailable"}
 ```
-### When the service is healthy, the API will return ok and a blank status:
+#### When the service is healthy, the API will return ok and a blank status:
 ```
 curl -X GET http://localhost:1323/healthcheck/v1/health
 # returns ok
@@ -93,15 +93,16 @@ Output:
 {}
 ```
 
-For **Secrets and ConfigMaps**:
+For ***Secrets and ConfigMaps***:
+=================================
 
 k8sClusterVitals tracks whether a specified Secret or ConfigMap exists. Users need to provide the names of the Secrets and ConfigMaps to be watched via a ConfigMap, and those resources will be monitored accordingly.
 
 To track a Secret or ConfigMap, you can optionally configure the following information:
 
-eg: scrape configuration [watcher_configmap.yaml](./examples/watcher_configmap.yaml)
+    eg: scrape configuration [watcher_configmap.yaml](./examples/watcher_configmap.yaml)
 
-```
+```yaml
 watched-secrets: |        # optional
   - name: my-secret       # name of the secret to watch
     namespace: default    # namespace where the secret resides
@@ -112,7 +113,7 @@ watched-configmaps: |     # optional
 
 #### Important note:
 - The ConfigMap should be located in the same namespace where the k8sClusterVitals Deployment exists.
-- The ConfigMap must include the label k8sclustervitals.io/config="exists".
+- The ConfigMap must include the label `k8sclustervitals.io/config=exists`.
 - The ConfigMap's name doesn't matter, as it uses the label to identify the configuration.
 
 Example
@@ -134,7 +135,7 @@ data:
 This setup will allow k8sClusterVitals to monitor the specified Secrets and ConfigMaps based on the provided configuration.
 
 ## Example Output:
-### If a provided secret or configmap does not exists, the following command will return not_ok:
+#### If a provided secret or configmap does not exists, the following command will return not_ok:
 ---
 ```
 curl -X GET http://localhost:1323/healthcheck/v1/health
@@ -163,34 +164,39 @@ Output:
 ```
 
 
-**You can monitor any number of Deployments, StatefulSets, Secrets, and ConfigMaps. k8sClusterVitals will continuously track these resources and report their status via the exposed API endpoint, ensuring that you receive real-time health updates and can take necessary action. The system also supports retries for tracking in case of initial failure.**
+> You can monitor any number of Deployments, StatefulSets, Secrets, and ConfigMaps. k8sClusterVitals will continuously track these resources and report their status via the exposed API endpoint, ensuring that you receive real-time health updates and can take necessary action. The system also supports retries for tracking in case of initial failure.
 
+---
 ## Installation:
 
 k8sClusterVitals supports both local and cluster deployments.
 
-**For local deployment, the following two environment variables are required:**
+***Via local deployment:***
+
+Note: the following two environment variables are required
 
 Step 1: Export this variable:
+
 ```
 export KUBE_HOME=${HOME}
 export ENV="kubeconfig"
 ```
 
 Step 2: To run the code:
-1. Navigate to the bin directory.
-2. Identify the appropriate binary for your operating system:
-    - linux64-amd
-    - linux64-arm
-    - darwin64-amd
-    - darwin64-arm
-3. Run the corresponding binary file:
+  - Navigate to the bin directory.
+  - Identify the appropriate binary for your operating system:
+      - linux64-amd
+      - linux64-arm
+      - darwin64-amd
+      - darwin64-arm
+  - Run the corresponding binary file:
+
 ```bash
 # For macOS
 ./bin/k8sclustervitals-v0.0.1-darwin-amd64
 ```
 
-**Via Docker Local:**
+***Via Docker Local:***
 
 ```bash
 docker build -t k8sclustervitals -f Dockerfile.production ${pwd}
@@ -198,23 +204,27 @@ docker build -t k8sclustervitals -f Dockerfile.production ${pwd}
 docker run -v ${HOME}/.kube:/root/.kube -e KUBE_HOME="/home" -e ENV="kubeconfig" -p 1323:1323  k8sclustervitals:latest
 ```
 
-**Via DockerHub:**
+***Via DockerHub:***
 
 ```bash
 docker pull k8sclustervitals:latest
 docker run -v ${HOME}/.kube:/home/.kube -e KUBE_HOME="/home" -e ENV="kubeconfig" -p 1323:1323 k8sclustervitals:latest
 ```
 
-**For Cluster Deployment:**
+***Via Cluster Deployment:***
+
 For cluster deployments, pass the required environment variable to the pod via the Deployment YAML:
 
-1. **Navigate to the Helm chart directory**:
+Step 1: Navigate to the Helm chart directory
+
 ```bash
     cd ./charts
  ```
-2. **Install the Helm chart**:
- Run the following command to install the `k8clustervitals` chart. You can customize the release name (`my-release`) as needed:
- Note: namespace has to be k8cv
+
+Step 2: Install the Helm chart
+
+Run the following command to install the `k8clustervitals` chart. You can customize the release name (`my-release`) as needed. Note: namespace has to be `k8cv`
+
 ```bash
    helm install my-release ./k8sclustervitals --create-namespace --namespace k8cv
 ```
@@ -224,6 +234,7 @@ For cluster deployments, pass the required environment variable to the pod via t
  - `--namespace`: for now it must be "k8cv"
 
 ### Example:
+
 ```bash
  helm install my-release ./k8sclustervitals  --create-namespace --namespace k8cv
 ```
