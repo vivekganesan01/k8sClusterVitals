@@ -116,7 +116,7 @@ watched-configmaps: |     # optional
 - The ConfigMap's name doesn't matter, as it uses the label to identify the configuration.
 
 Example
-```
+```yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -185,14 +185,14 @@ Step 2: To run the code:
     - darwin64-amd
     - darwin64-arm
 3. Run the corresponding binary file:
-```
+```bash
 # For macOS
 ./bin/k8sclustervitals-v0.0.1-darwin-amd64
 ```
 
 **Via Docker Local:**
 
-```
+```bash
 docker build -t k8sclustervitals -f Dockerfile.production ${pwd}
 
 docker run -v ${HOME}/.kube:/root/.kube -e KUBE_HOME="/home" -e ENV="kubeconfig" -p 1323:1323  k8sclustervitals:latest
@@ -200,7 +200,7 @@ docker run -v ${HOME}/.kube:/root/.kube -e KUBE_HOME="/home" -e ENV="kubeconfig"
 
 **Via DockerHub:**
 
-```
+```bash
 docker pull k8sclustervitals:latest
 docker run -v ${HOME}/.kube:/home/.kube -e KUBE_HOME="/home" -e ENV="kubeconfig" -p 1323:1323 k8sclustervitals:latest
 ```
@@ -208,9 +208,21 @@ docker run -v ${HOME}/.kube:/home/.kube -e KUBE_HOME="/home" -e ENV="kubeconfig"
 **For Cluster Deployment:**
 For cluster deployments, pass the required environment variable to the pod via the Deployment YAML:
 
-```
-# Set this environment variable in the pod's container spec
-ENV="inclusterconfig"
+1. **Navigate to the Helm chart directory**:
+```bash
+    cd ./charts/k8clustervitals
+ ```
+2. **Install the Helm chart**:
+ Run the following command to install the `k8clustervitals` chart. You can customize the release name (`my-release`) and the namespace (`my-namespace`) as needed:
+```bash
+    helm install my-release ./k8clustervitals --namespace my-namespace
 ```
 
-**Note: Helm charts are coming soon.**
+ - `my-release`: This is the release name. You can choose any name for the release.
+ - `./k8clustervitals`: This is the relative path to the Helm chart.
+ - `--namespace`: Specify the namespace where you want to install the chart. If the namespace doesn't exist, you may need to create it using `kubectl create namespace my-namespace`.
+
+### Example:
+```bash
+helm install my-release ./k8clustervitals --namespace my-namespace
+```
