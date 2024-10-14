@@ -171,12 +171,13 @@ k8sClusterVitals supports both local and cluster deployments.
 
 **For local deployment, the following two environment variables are required:**
 
+Step 1: Export this variable:
 ```
 export KUBE_HOME=${HOME}
 export ENV="kubeconfig"
 ```
 
-To run the code:
+Step 2: To run the code:
 1. Navigate to the bin directory.
 2. Identify the appropriate binary for your operating system:
     - linux64-amd
@@ -189,6 +190,21 @@ To run the code:
 ./bin/k8sclustervitals-v0.0.1-darwin-amd64
 ```
 
+**Via Docker Local:**
+
+```
+docker build -t k8sclustervitals -f Dockerfile.production ${pwd}
+
+docker run -v ${HOME}/.kube:/root/.kube -e KUBE_HOME="/home" -e ENV="kubeconfig" -p 1323:1323  k8sclustervitals:latest
+```
+
+**Via DockerHub:**
+
+```
+docker pull k8sclustervitals:latest
+docker run -v ${HOME}/.kube:/home/.kube -e KUBE_HOME="/home" -e ENV="kubeconfig" -p 1323:1323 k8sclustervitals:latest
+```
+
 **For Cluster Deployment:**
 For cluster deployments, pass the required environment variable to the pod via the Deployment YAML:
 
@@ -197,4 +213,4 @@ For cluster deployments, pass the required environment variable to the pod via t
 ENV="inclusterconfig"
 ```
 
-**Note: Docker image and Helm charts are coming soon.**
+**Note: Helm charts are coming soon.**
